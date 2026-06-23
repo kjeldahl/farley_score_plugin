@@ -1,6 +1,6 @@
 ---
 name: signal-detection-patterns
-description: Static detection heuristics for each Farley property, language-specific patterns for Java, Python, JavaScript, Go, and C#
+description: Static detection heuristics for each Farley property, language-specific patterns for Java, Python, JavaScript, Go, C#, and Ruby
 ---
 
 # Signal Detection Patterns
@@ -128,6 +128,8 @@ Detection patterns for Mock Tautology and Mock-Only Test are detailed in the Moc
 | JavaScript | `expect\(true\)\.toBe\(true\)`, `expect\(1\)\.toBe\(1\)`, `expect\(.*\)\.toBeTruthy\(\)` on literal | `expect(true).toBe(true)`, `expect(1).toBe(1)` |
 | Go | `assert\.True\(t,\s*true\)`, `assert\.Equal\(t,\s*(\d+),\s*\1\)` | `assert.True(t, true)`, `assert.Equal(t, 1, 1)` |
 | C# | `Assert\.IsTrue\(true\)`, `Assert\.AreEqual\(\d+,\s*\d+\)` (same literal), `Assert\.IsNotNull\(new ` | `Assert.IsTrue(true)`, `Assert.AreEqual(1, 1)` |
+| Ruby (RSpec) | `expect\(true\)\.to be(_truthy\|\(true\)\| true)`, `expect\((\d+)\)\.to eq\(\1\)` (same literal), `expect\(\w+\.new\)\.not_to be_nil` | `expect(true).to be_truthy`, `expect(1).to eq(1)` |
+| Ruby (Minitest) | `assert\s+true`, `assert\(true\)`, `refute\s+false`, `assert_equal\s+(\d+),\s*\1`, `assert_instance_of\b` on a literal constructor | `assert true`, `assert_equal 1, 1` |
 
 ### Framework Test Detection
 
@@ -140,6 +142,7 @@ A test is a framework test when it asserts on the return value of a framework me
 | JavaScript | `expect(jest.fn()).toBeDefined()`, assertions on framework utilities | `expect(jest.fn()).toBeDefined()` |
 | Go | Assertions on `new(MockFoo)` directly | `assert.NotNil(t, new(MockFoo))` |
 | C# | `Assert.IsNotNull(new Mock<IFoo>())`, assertions on `Substitute.For<>()` | `Assert.IsNotNull(new Mock<IFoo>())` |
+| Ruby | Assertions on `double(`, `instance_double(`, `spy(` return values directly | `expect(double('foo')).not_to be_nil` |
 
 ## Mock Anti-Patterns
 
@@ -164,6 +167,9 @@ A test that configures a mock's return value and then asserts that the same mock
 | Go (gomock) | `(\w+)\.EXPECT\(\)\.\w+\(.*\)\.Return\(\w+` | `assert.Equal` on same mock's method return |
 | C# (Moq) | `(\w+)\.Setup\(.*\)\.Returns\(\w+\)` | `Assert.*(\w+\.Object\.\w+\()` |
 | C# (NSubstitute) | `(\w+)\.\w+\(.*\)\.Returns\(\w+\)` | `Assert.*(\1\.\w+\()` |
+| Ruby (RSpec mocks) | `allow\((\w+)\)\.to receive\(:(\w+)\)\.and_return\(\w+\)` | `expect(\1.\2(...)).to eq(value)` on same double |
+| Ruby (Minitest::Mock) | `(\w+)\.expect\(:(\w+),\s*(\w+)` | `assert_equal \3, \1.\2(...)` |
+| Ruby (Mocha) | `(\w+)\.stubs\(:\w+\)\.returns\(\w+\)` | assert on same stub's return |
 
 **Key discriminator**: If a production class is instantiated between mock setup and assertion (`new RealClass(mock)` or equivalent), it is NOT a tautology.
 
@@ -185,6 +191,8 @@ A test where every object is a mock/stub/fake and no real class is instantiated 
 | Go (gomock) | `NewMock\w+\(` | non-mock struct literal or constructor |
 | C# (Moq) | `new Mock<`, `Mock\.Of<` | `new [^M]\w+\(` |
 | C# (NSubstitute) | `Substitute\.For<` | `new \w+\(` |
+| Ruby (RSpec) | `double\(`, `instance_double\(`, `class_double\(`, `spy\(`, `mock_model\(` | `\w+\.new\b` (real class) or `described_class` instantiated |
+| Ruby (Minitest/Mocha) | `Minitest::Mock\.new`, `mock\(`, `stub\(`, `\.stubs\(` | `\w+\.new\b` (non-mock constructor) |
 
 **False positive mitigation**: Tests where the SUT is injected via `setUp`/`@BeforeEach`/`beforeEach` are not flagged -- check setup methods for production class instantiation before flagging.
 
@@ -213,6 +221,9 @@ Tests that use verify() with exact call counts, strict argument matchers, and/or
 | Go (gomock) | `.Times\(\d+\)` | `gomock\.InOrder\(` | -- |
 | C# (Moq) | `Times\.(Exactly\|Once\|AtMostOnce)\(` | `MockSequence` | `VerifyNoOtherCalls\(\)` |
 | C# (NSubstitute) | `.Received\(\d+\)\.` | -- | -- |
+| Ruby (RSpec) | `to receive\(:\w+\)\.(once\|twice\|exactly\(\d+\))` | `.ordered` on receive | -- |
+| Ruby (Minitest::Mock) | `\w+\.expect\(` (each sets exact args/count) | -- | `\w+\.verify` (asserts all expectations met) |
+| Ruby (Mocha) | `expects\(:\w+\)\.(once\|twice\|times\()` | `.in_sequence\(` | -- |
 
 **Note**: Simple `verify(mock).method()` without `times()` is NOT flagged -- verifying a side effect occurred is legitimate. Only exact counts, ordering, and exhaustive checks are signals.
 
@@ -243,6 +254,8 @@ Tests coupled to implementation through mechanisms subtler than reflection: Argu
 | Go (gomock) | -- (gomock lacks argument captors) | -- | type assertions |
 | C# (Moq) | `It\.Is<\w+>\(.*=>.*\.` (deep lambda inspection) | `Times\.Never` | `Assert\.IsAssignableFrom<`, `Assert\.IsType<` |
 | C# (NSubstitute) | `Arg\.Is<\w+>\(.*=>` | `.DidNotReceive\(\)\.` | `Assert\.IsAssignableFrom<` |
+| Ruby (RSpec) | `with\(.*\)` deep arg matching + `have_received` chains | `not_to receive\(`, `to receive\(.*\)\.never` | `be_a\(`, `be_an_instance_of\(`, `be_kind_of\(` |
+| Ruby (Minitest/Mocha) | `assert_equal` on `mock.expect` args + `\.send\(` introspection | Mocha `\.never\b` | `assert_instance_of`, `assert_kind_of` |
 
 ### Mock Anti-Pattern Signal Overlap
 
@@ -373,6 +386,42 @@ Tests coupled to implementation through mechanisms subtler than reflection: Argu
 | Times.Never (Moq) | `Times\.Never` | M (negative -- AP4) |
 | DidNotReceive (NSubstitute) | `.DidNotReceive\(\)\.` | M (negative -- AP4) |
 | Type check (C#) | `Assert\.IsAssignableFrom<`, `Assert\.IsType<`, `Assert\.IsInstanceOf<` | M (negative -- AP4) |
+
+### Ruby (RSpec / Minitest)
+
+| Pattern | Regex / Detection | Maps To |
+|---|---|---|
+| Test method (RSpec) | `it\s+['"]`, `it\s+do`, `specify\b`, `example\b` | Test method boundary |
+| Test method (Minitest) | `def test_`, `it\s+['"]` (spec style) | Test method boundary |
+| Assertion (RSpec) | `expect\(.*\)\.(to\|not_to\|to_not)\b`, `is_expected\.` | G (count), various |
+| Assertion (Minitest) | `assert\w*\b`, `refute\w*\b`, `must_\w+`, `wont_\w+` | G (count), various |
+| Describe/context block | `(describe\|context\|feature)\s+` | U (positive, organizational) |
+| Nested context | Nested `context`/`describe` blocks | U (positive) |
+| Skip | `xit\b`, `xdescribe\b`, `xcontext\b`, `pending\b`, `skip\b` | N (negative) |
+| Shared examples | `shared_examples`, `it_behaves_like`, `include_examples` | N (positive -- DRY reuse) |
+| Data-driven (parameterized) | `\[.*\]\.each do \|.*\|` wrapping `it`, `where(` (rspec-parameterized) | N (positive) |
+| Sleep | `\bsleep\b`, `sleep\(` | R, F (negative) |
+| File I/O | `File\.`, `IO\.`, `Dir\.`, `Tempfile`, `FileUtils\.` | R, F (negative) |
+| Network | `Net::HTTP`, `open-uri`, `URI\.open`, `Faraday`, `RestClient`, `HTTParty` (unless `WebMock`/`VCR`) | R, F (negative) |
+| Database | `ActiveRecord`, `\.where(`, `\.create!?(`, `DB\[`, `Sequel` (unless transactional fixtures) | R, F (negative) |
+| Datetime | `Time\.now`, `Date\.today`, `DateTime\.now` (without `Timecop`/`travel_to`) | R (negative) |
+| Random | `\brand\(`, `Random\.` without a seed, `SecureRandom\.` | R (negative) |
+| Env vars | `ENV\[` without stubbing | R (negative) |
+| before/after hooks | `before\b`, `after\b`, `around\b`, `def setup`, `def teardown` | A (context) |
+| let / subject | `let\(`, `let!\(`, `subject\b` | A (positive -- memoized fresh per example) |
+| Global/class state | `@@\w+`, `\$\w+` mutated across examples, `before(:all)`/`before(:context)` mutation | A, R (negative) |
+| Reflection | `instance_variable_get`, `instance_variable_set`, `\.send\(`, `\.__send__\(`, `define_method` | M (negative) |
+| Mock creation (RSpec) | `double\(`, `instance_double\(`, `class_double\(`, `spy\(`, `mock_model\(`, `allow\(` | Mock context (AP1-AP4) |
+| Mock creation (Minitest) | `Minitest::Mock\.new`, `stub\b` (Object#stub) | Mock context (AP1-AP4) |
+| Mock creation (Mocha) | `\.stubs\(`, `\.expects\(`, `\bmock\(`, `\bstub\(` | Mock context (AP1-AP4) |
+| Mock tautology (RSpec) | `allow\(\w+\)\.to receive\(:\w+\)\.and_return\(\w+\)` then `expect` on same double | N, M (negative) |
+| Mock tautology (Minitest) | `\w+\.expect\(:\w+,\s*\w+` then `assert_equal` on same mock method | N, M (negative) |
+| Exact count (RSpec) | `to receive\(:\w+\)\.(once\|twice\|exactly\(\d+\)\.times\|times)` | M (negative -- AP3) |
+| Exact count (Mocha) | `\.expects\(:\w+\)\.(once\|twice\|times\()` | M (negative -- AP3) |
+| Call ordering (RSpec) | `\.ordered\b` on receive | M (negative -- AP3) |
+| Mock verify (Minitest) | `\w+\.verify\b` (exhaustive expectation check) | M (negative -- AP3) |
+| Negative expectation | `not_to receive\(`, `to receive\(.*\)\.never\b`, Mocha `\.never\b` | M (negative -- AP4) |
+| Type check assertion | `be_a\(`, `be_an_instance_of\(`, `be_kind_of\(`, `assert_instance_of`, `assert_kind_of` | M (negative -- AP4) |
 
 ## Detection Priorities
 

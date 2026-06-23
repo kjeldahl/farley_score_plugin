@@ -133,6 +133,7 @@ This is **autonomous review mode** - Claude does the analysis and produces the r
 ```
 /msec:farley-score tests/
 /msec:farley-score src/test/java/
+/msec:farley-score spec/
 /msec:farley-score evaluate test quality for the whole project
 /msec:farley-score review test design in tests/unit/
 ```
@@ -195,7 +196,7 @@ These 7 principles define the methodology:
 
 ### Phase 1: Discovery (2-3 turns)
 
-- Identify test file locations using naming conventions and directory patterns (`test/`, `tests/`, `*_test.*`, `*Test.*`, `*.spec.*`, `*.test.*`)
+- Identify test file locations using naming conventions and directory patterns (`test/`, `tests/`, `spec/`, `*_test.*`, `*Test.*`, `*_spec.*`, `*.spec.*`, `*.test.*`)
 - Detect primary language, test framework, and mocking framework from imports and annotations
 - Count total test files, test methods, and LOC
 - If over 50 test files, activate deterministic sampling (SHA-256 hash of filename, select 30% plus all files exceeding 100 test methods)
@@ -405,6 +406,7 @@ https://github.com/andlaf-ak/claude-code-agents/tree/main/test-design-reviewer
 | JavaScript/TypeScript | Jest, Vitest | Jest mocks, Sinon |
 | Go | testing | testify/mock, gomock |
 | C# | NUnit, xUnit | Moq, NSubstitute |
+| Ruby | RSpec, Minitest | RSpec mocks, Minitest::Mock, Mocha |
 
 ---
 
