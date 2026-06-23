@@ -800,7 +800,7 @@ Suggested Focus:
 
 **For developers who want deep expertise in test design quality.**
 
-1. **Full signal detection** - Recognize all signals across all 5 supported languages
+1. **Full signal detection** - Recognize all signals across all 6 supported languages
 2. **Mock Anti-Pattern identification** - Distinguish AP1-AP4 and their severity
 3. **Suite-level strategy** - Where to invest effort across a large test suite
 4. **Weight optimization** - Strategic property improvement for maximum Farley Index impact

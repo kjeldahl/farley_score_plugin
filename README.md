@@ -65,7 +65,7 @@ claude plugin install msec@farley-score-plugin
 
 ## Supported Languages
 
-Java (JUnit), Python (pytest, unittest), JavaScript/TypeScript (Jest, Vitest), Go (testing), C# (NUnit, xUnit).
+Java (JUnit), Python (pytest, unittest), JavaScript/TypeScript (Jest, Vitest), Go (testing), C# (NUnit, xUnit), Ruby (RSpec, Minitest).
 
 ## Attribution
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Ruby support: signal detection for RSpec and Minitest (RSpec mocks, Minitest::Mock, Mocha), including trivial/framework tautologies and Mock Anti-Patterns AP1-AP4
+- Discovery now recognizes `spec/` directories and `*_spec.*` / `*_test.rb` naming conventions
+
 ## 1.0.0 (2026-02-27)
 
 ### Initial Release
